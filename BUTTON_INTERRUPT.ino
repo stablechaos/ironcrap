@@ -7,7 +7,7 @@
 
 #define BRIGHTNESS_MAX 255                                 // max brightness
 #define MIC_ANIMATION_MODES 2                              // number of mic based animation modes
-#define ANIMATION_MODES 13                                  // number of "normal" animation modes
+#define ANIMATION_MODES 14                                  // number of "normal" animation modes
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800); // init neo pixel rings
 
@@ -60,23 +60,29 @@ void loop() {
       case 3: colorWipe(strip.Color(0, 0, (uint8_t)(255*(brightness/255))), 50);  // Blue
               colorWipe(strip.Color(0, 0, 0), 50);
               break;
-      case 4: theaterChase(strip.Color((uint8_t)(127*(brightness/255)), (uint8_t)(127*(brightness/255)), (uint8_t)(255*(brightness/127))), 50); // White
+      case 4: colorWipe(strip.Color((uint8_t)(255*(brightness/255)),(uint8_t)(255*(brightness/255)),0), 50);  // Yellow
+              colorWipe(strip.Color(0, 0, 0), 50);
               break;
-      case 5: theaterChase(strip.Color((uint8_t)(127*(brightness/255)),   0,   0), 50); // Red
+      case 5: colorWipe(strip.Color((uint8_t)(255*(brightness/255)), 0, (uint8_t)(255*(brightness/255))), 50);  // Purple
+              colorWipe(strip.Color(0, 0, 0), 50);
               break;
-      case 6: theaterChase(strip.Color(  0,   0, (uint8_t)(127*(brightness/255))), 50); // Blue
+      case 6: theaterChase(strip.Color((uint8_t)(127*(brightness/255)), (uint8_t)(127*(brightness/255)), (uint8_t)(255*(brightness/127))), 50); // White
               break;
-      case 7: rainbow(20);
+      case 7: theaterChase(strip.Color((uint8_t)(127*(brightness/255)),   0,   0), 50); // Red
               break;
-      case 8: rainbowCycle(20);
+      case 8: theaterChase(strip.Color(  0,   0, (uint8_t)(127*(brightness/255))), 50); // Blue
               break;
-      case 9: theaterChaseRainbow(50);
+      case 9: rainbow(20);
               break;
-      case 10: colorChaser(20);
+      case 10: rainbowCycle(20);
               break;
-      case 12: rainbow2(20);
+      case 11: theaterChaseRainbow(50);
               break;
-      case 13: rainbowCycle2(20);
+      case 12: colorChaser(20);
+              break;
+      case 13: rainbow2(20);
+              break;
+      case 14: rainbowCycle2(20);
               break;
     }
   }
@@ -94,7 +100,7 @@ ISR(PCINT0_vect) {
   bool newStateButton2 = digitalRead(12);
   if(newStateButton0 == LOW && oldStateButton0 == HIGH) {
     brightness = brightness / 2;
-    if(brightness < 30) brightness = BRIGHTNESS_MAX;
+    if(brightness < 8) brightness = BRIGHTNESS_MAX;
     Serial.print("Brightness: ");
     Serial.println(brightness);
   }
@@ -121,6 +127,7 @@ ISR(PCINT0_vect) {
 }
 
 void equalizer() {
+  // todo average der letzten n messungen rausrechnen
   for(uint8_t ii = 0; ii < 10; ii++) {
     int val = ((1024-analogRead(A0))/25)+1;
     Serial.println(val);
