@@ -3,16 +3,18 @@
 #define PIXEL_PIN 6                                        // Datapin rings are connected to
 #define PIXEL_COUNT 40                                     // Number of pixels
 
+#define MIC_PIN A0
+
 #define BRIGHTNESS_MAX 255                                 // max brightness
 #define MIC_ANIMATION_MODES 2                              // number of mic based animation modes
-#define ANIMATION_MODES 9                                  // number of "normal" animation modes
+#define ANIMATION_MODES 13                                  // number of "normal" animation modes
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800); // init neo pixel rings
 
 volatile bool oldStateButton0 = HIGH;
 volatile bool oldStateButton1 = HIGH;
 volatile bool oldStateButton2 = HIGH;
-volatile uint8_t brightness = BRIGHTNESS_MAX;
+volatile float brightness = 32;
 volatile bool micMode = LOW;
 volatile uint8_t currentAnimationMode = 0;
 
@@ -36,8 +38,7 @@ void loop() {
   if(micMode) {
     switch(currentAnimationMode) {
       case 0:
-        Serial.println("Mic Animation Mode 0");
-        delay(1000);
+        equalizer();
         break;
       case 1:
         Serial.println("Mic Animation Mode 1");
@@ -47,33 +48,35 @@ void loop() {
         break;
     }
   } else {
-    Serial.print("TESTER: ");
-    Serial.print(brightness/255);
-    Serial.print(" ");
-    Serial.println(255*(uint16_t)(brightness/255));
     switch(currentAnimationMode) {
       case 0: colorWipe(strip.Color(0, 0, 0), 50);    // Black/off
             break;
-      case 1: colorWipe(strip.Color(255, 0, 0), 50);  // Red
+      case 1: colorWipe(strip.Color((uint8_t)(255*(brightness/255)), 0, 0), 50);  // Red
               colorWipe(strip.Color(0, 0, 0), 50);
               break;
-      case 2: colorWipe(strip.Color(0, 255, 0), 50);  // Green
+      case 2: colorWipe(strip.Color(0, (uint8_t)(255*(brightness/255)), 0), 50);  // Green
               colorWipe(strip.Color(0, 0, 0), 50);
               break;
-      case 3: colorWipe(strip.Color(0, 0, 255), 50);  // Blue
+      case 3: colorWipe(strip.Color(0, 0, (uint8_t)(255*(brightness/255))), 50);  // Blue
               colorWipe(strip.Color(0, 0, 0), 50);
               break;
-      case 4: theaterChase(strip.Color(127, 127, 127), 50); // White
+      case 4: theaterChase(strip.Color((uint8_t)(127*(brightness/255)), (uint8_t)(127*(brightness/255)), (uint8_t)(255*(brightness/127))), 50); // White
               break;
-      case 5: theaterChase(strip.Color(127,   0,   0), 50); // Red
+      case 5: theaterChase(strip.Color((uint8_t)(127*(brightness/255)),   0,   0), 50); // Red
               break;
-      case 6: theaterChase(strip.Color(  0,   0, 127), 50); // Blue
+      case 6: theaterChase(strip.Color(  0,   0, (uint8_t)(127*(brightness/255))), 50); // Blue
               break;
       case 7: rainbow(20);
               break;
       case 8: rainbowCycle(20);
               break;
       case 9: theaterChaseRainbow(50);
+              break;
+      case 10: colorChaser(20);
+              break;
+      case 12: rainbow2(20);
+              break;
+      case 13: rainbowCycle2(20);
               break;
     }
   }
@@ -91,7 +94,7 @@ ISR(PCINT0_vect) {
   bool newStateButton2 = digitalRead(12);
   if(newStateButton0 == LOW && oldStateButton0 == HIGH) {
     brightness = brightness / 2;
-    if(brightness < 16) brightness = BRIGHTNESS_MAX;
+    if(brightness < 30) brightness = BRIGHTNESS_MAX;
     Serial.print("Brightness: ");
     Serial.println(brightness);
   }
@@ -117,12 +120,40 @@ ISR(PCINT0_vect) {
   delay(100);
 }
 
+void equalizer() {
+  for(uint8_t ii = 0; ii < 10; ii++) {
+    int val = ((1024-analogRead(A0))/25)+1;
+    Serial.println(val);
+    for(uint16_t i = 0; i<strip.numPixels(); i++) {
+      if(i >= val) {
+        strip.setPixelColor(i,strip.Color(0,0,0));
+      } else {
+        strip.setPixelColor(i,strip.Color((uint8_t)(255*(brightness/255)),0,0));
+      }
+    }
+    strip.show();
+    delay(100);
+  }
+}
+
 // Fill the dots one after the other with a color
 void colorWipe(uint32_t c, uint8_t wait) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
       strip.setPixelColor(i, c);
       strip.show();
       delay(wait);
+  }
+}
+
+void colorChaser(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256; j++) {
+    for(i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel((i+j) & (uint8_t)(255*(brightness/255))));
+    }
+    strip.show();
+    delay(wait);
   }
 }
 
@@ -138,6 +169,18 @@ void rainbow(uint8_t wait) {
   }
 }
 
+void rainbow2(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256; j++) {
+    for(i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel2((i+j) & 255));
+    }
+    strip.show();
+    delay(wait);
+  }
+}
+
 // Slightly different, this makes the rainbow equally distributed throughout
 void rainbowCycle(uint8_t wait) {
   uint16_t i, j;
@@ -145,6 +188,18 @@ void rainbowCycle(uint8_t wait) {
   for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
     for(i=0; i< strip.numPixels(); i++) {
       strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+    }
+    strip.show();
+    delay(wait);
+  }
+}
+
+void rainbowCycle2(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
+    for(i=0; i< strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel2(((i * 256 / strip.numPixels()) + j) & 255));
     }
     strip.show();
     delay(wait);
@@ -192,12 +247,27 @@ void theaterChaseRainbow(uint8_t wait) {
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
   if(WheelPos < 85) {
-   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+   return strip.Color( - WheelPos * 3, 0, WheelPos * 3);
   } else if(WheelPos < 170) {
     WheelPos -= 85;
-   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+   return strip.Color(0, WheelPos * 3, 255 - WheelPos* 3);
   } else {
    WheelPos -= 170;
    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  }
+}
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel2(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+   return strip.Color( - WheelPos * 3, 0, WheelPos * 3);
+  } else if(WheelPos < 170) {
+    WheelPos -= 85;
+   return strip.Color(0, ((uint8_t)(WheelPos * 3)*(brightness/255)), ((uint8_t)(255 - WheelPos * 3)*(brightness/255)));
+  } else {
+   WheelPos -= 170;
+   return strip.Color(((uint8_t)(WheelPos * 3)*(brightness/255)), ((uint8_t)(255 - WheelPos * 3)*(brightness/255)), 0);
   }
 }
