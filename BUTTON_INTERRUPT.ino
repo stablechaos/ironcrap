@@ -112,9 +112,9 @@ ISR(PCINT0_vect) {
   }
   if(newStateButton2 == LOW && oldStateButton2 == HIGH) {
     currentAnimationMode++;
-    if(micMode && currentAnimationMode >= MIC_ANIMATION_MODES) {
+    if(micMode && currentAnimationMode > MIC_ANIMATION_MODES) {
       currentAnimationMode = 0;
-    } else if(currentAnimationMode >= ANIMATION_MODES) {
+    } else if(currentAnimationMode > ANIMATION_MODES) {
       currentAnimationMode = 0;
     }
     Serial.print("Animation mode: ");
