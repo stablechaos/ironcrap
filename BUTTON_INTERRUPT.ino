@@ -3,6 +3,8 @@
 #define PIXEL_PIN 6                                        // Datapin rings are connected to
 #define PIXEL_COUNT 40                                     // Number of pixels
 
+#define SOUNDSET_SIZE 5
+
 #define MIC_PIN A0
 
 #define BRIGHTNESS_MAX 255                                 // max brightness
@@ -17,6 +19,8 @@ volatile bool oldStateButton2 = HIGH;
 volatile float brightness = 32;
 volatile bool micMode = LOW;
 volatile uint8_t currentAnimationMode = 0;
+volatile uint8_t soundSetPos = SOUNDSET_SIZE;
+volatile uint8_t soundSet[SOUNDSET_SIZE];
 
 void setup() {
   Serial.begin(9600);
@@ -32,6 +36,7 @@ void setup() {
   pciSetup(12);
   strip.begin();
   strip.show();
+  initSoundSet();
 }
 
 void loop() {
@@ -129,17 +134,23 @@ ISR(PCINT0_vect) {
 void equalizer() {
   // todo average der letzten n messungen rausrechnen
   for(uint8_t ii = 0; ii < 10; ii++) {
-    int val = ((1024-analogRead(A0))/25)+1;
-    Serial.println(val);
+    uint8_t val = ((1024-analogRead(A0))/25)+1;
+    Serial.print("read: ");
+    Serial.print(val);
+    Serial.print(" | max: ");
+    Serial.print(getSoundSetMax());
+    Serial.print(" | avg: ");
+    Serial.println(getSoundSetAvg());
+    appendSoundSetVal(val);
+    val = getSoundSetAvg();
     for(uint16_t i = 0; i<strip.numPixels(); i++) {
       if(i >= val) {
         strip.setPixelColor(i,strip.Color(0,0,0));
       } else {
-        strip.setPixelColor(i,strip.Color((uint8_t)(255*(brightness/255)),0,0));
+        strip.setPixelColor(i,strip.Color(0,0,(uint8_t)(127*(brightness/255)),0,0));
       }
     }
     strip.show();
-    delay(100);
   }
 }
 
@@ -278,3 +289,43 @@ uint32_t Wheel2(byte WheelPos) {
    return strip.Color(((uint8_t)(WheelPos * 3)*(brightness/255)), ((uint8_t)(255 - WheelPos * 3)*(brightness/255)), 0);
   }
 }
+
+/**
+ * soundset stuff
+ */
+void initSoundSet() {
+  for(uint8_t i=0; i< SOUNDSET_SIZE;i++) {
+    appendSoundSetVal(0);
+  }
+}
+
+void appendSoundSetVal(int val) {
+  soundSetPos++;
+  if(soundSetPos >= SOUNDSET_SIZE) {
+    soundSetPos = 0;
+  }
+  soundSet[soundSetPos] = val;
+}
+
+int getSoundSetMax() {
+  uint8_t maximum = 0;
+  for(uint8_t i = 0; i<SOUNDSET_SIZE; i++) {
+    if(soundSet[i] > maximum) {
+      maximum = soundSet[i];
+    }
+  }
+  return maximum;
+}
+
+int getSoundSetAvg() {
+  uint8_t avg = 0;
+  for(uint8_t i = 0; i<SOUNDSET_SIZE;i++) {
+    avg = (avg + soundSet[i])/2;
+  } 
+  return avg;
+}
+
+
+
+
+
