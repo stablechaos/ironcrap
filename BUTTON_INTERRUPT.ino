@@ -147,7 +147,7 @@ void equalizer() {
       if(i >= val) {
         strip.setPixelColor(i,strip.Color(0,0,0));
       } else {
-        strip.setPixelColor(i,strip.Color(0,0,(uint8_t)(127*(brightness/255)),0,0));
+        strip.setPixelColor(i,strip.Color(0,0,(uint8_t)(127*(brightness/255))));
       }
     }
     strip.show();
